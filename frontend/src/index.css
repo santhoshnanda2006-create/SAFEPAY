@@ -1,0 +1,721 @@
+@import "tailwindcss";
+
+/* ─── Apple Design Tokens ────────────────────────────────────────── */
+:root {
+  /* Colors - Brand & Accent */
+  --color-primary: #0066cc;
+  --color-primary-focus: #0071e3;
+  --color-primary-on-dark: #2997ff;
+
+  /* Colors - Surface */
+  --color-canvas: #ffffff;
+  --color-canvas-parchment: #f5f5f7;
+  --color-surface-pearl: #fafafc;
+  --color-surface-tile-1: #272729;
+  --color-surface-tile-2: #2a2a2c;
+  --color-surface-tile-3: #252527;
+  --color-surface-black: #000000;
+  --color-surface-chip-translucent: rgba(210, 210, 215, 0.64);
+
+  /* Colors - Text */
+  --color-ink: #1d1d1f;
+  --color-body: #1d1d1f;
+  --color-body-on-dark: #ffffff;
+  --color-body-muted: #86868b;
+  --color-ink-muted-80: #333333;
+  --color-ink-muted-48: #7a7a7a;
+
+  /* Colors - Hairlines & Borders */
+  --color-divider-soft: rgba(0, 0, 0, 0.04);
+  --color-hairline: rgba(0, 0, 0, 0.08);
+  --color-hairline-dark: rgba(255, 255, 255, 0.12);
+
+  /* Semantic Feedback (Apple System Status) */
+  --color-safe: #34c759;
+  --color-safe-tint: rgba(52, 199, 89, 0.1);
+  --color-caution: #ff9500;
+  --color-caution-tint: rgba(255, 149, 0, 0.1);
+  --color-danger: #ff3b30;
+  --color-danger-tint: rgba(255, 59, 48, 0.08);
+
+  /* Typography */
+  --font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Inter", sans-serif;
+
+  /* Border Radius */
+  --radius-none: 0px;
+  --radius-xs: 5px;
+  --radius-sm: 8px;
+  --radius-md: 11px;
+  --radius-lg: 18px;
+  --radius-pill: 9999px;
+  --radius-full: 50%;
+}
+
+/* ─── Reset & Base ──────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  background-color: var(--color-canvas-parchment);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-family);
+  font-size: 17px;
+  line-height: 1.47;
+  letter-spacing: -0.022em;
+  min-height: 100vh;
+  background-color: var(--color-canvas-parchment);
+  color: var(--color-ink);
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Typography Utility ────────────────────────────────────────── */
+.typography-hero {
+  font-size: clamp(34px, 5vw, 48px);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.028em;
+  color: var(--color-ink);
+}
+
+.typography-display {
+  font-size: clamp(28px, 4vw, 36px);
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+  color: var(--color-ink);
+}
+
+.typography-tagline {
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+
+.typography-body {
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.47;
+  letter-spacing: -0.022em;
+  color: var(--color-ink);
+}
+
+.typography-body-strong {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.47;
+  letter-spacing: -0.022em;
+  color: var(--color-ink);
+}
+
+.typography-caption {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.43;
+  letter-spacing: -0.016em;
+  color: var(--color-body-muted);
+}
+
+.typography-fine-print {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.33;
+  letter-spacing: -0.01em;
+  color: var(--color-ink-muted-48);
+}
+
+/* ─── Global Nav (Ultra-thin Black Nav Bar) ──────────────────────── */
+.global-nav {
+  height: 44px;
+  background-color: var(--color-surface-black);
+  color: var(--color-body-on-dark);
+  position: sticky;
+  top: 0;
+  z-index: 999;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.global-nav-container {
+  max-width: 1024px;
+  margin: 0 auto;
+  height: 100%;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.global-nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--color-body-on-dark);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.global-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.global-nav-link {
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  transition: color 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.global-nav-link:hover, .global-nav-link.active {
+  color: var(--color-body-on-dark);
+}
+
+/* ─── Sub-Nav (Frosted Glass Parchment) ─────────────────────────── */
+.sub-nav-frosted {
+  height: 52px;
+  background-color: rgba(245, 245, 247, 0.82);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid var(--color-hairline);
+  position: sticky;
+  top: 44px;
+  z-index: 990;
+}
+
+.sub-nav-container {
+  max-width: 1024px;
+  margin: 0 auto;
+  height: 100%;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sub-nav-title {
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--color-ink);
+  text-decoration: none;
+}
+
+.sub-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ─── Layout Shell ──────────────────────────────────────────────── */
+.main-shell {
+  flex: 1;
+  max-width: 980px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 48px 24px 80px;
+}
+
+.surface-center-stack {
+  max-width: 580px;
+  margin: 0 auto;
+}
+
+/* ─── Store Utility Card (White, 18px radius, hairline border) ─── */
+.store-utility-card {
+  background-color: var(--color-canvas);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.store-utility-card:hover {
+  border-color: rgba(0, 0, 0, 0.16);
+}
+
+/* ─── Buttons (Apple Grammar) ──────────────────────────────────── */
+/* Primary Blue Pill CTA */
+.button-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: var(--color-primary);
+  color: #ffffff;
+  font-family: var(--font-family);
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  padding: 10px 22px;
+  border-radius: var(--radius-pill);
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.1s cubic-bezier(0.2, 0, 0, 1), background-color 0.15s ease;
+  user-select: none;
+}
+
+.button-primary:hover {
+  background-color: #0071e3;
+}
+
+.button-primary:active {
+  transform: scale(0.95);
+}
+
+.button-primary:focus-visible {
+  outline: 2px solid var(--color-primary-focus);
+  outline-offset: 2px;
+}
+
+.button-primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Secondary Ghost Pill */
+.button-secondary-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  font-family: var(--font-family);
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  padding: 9px 20px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.1s cubic-bezier(0.2, 0, 0, 1), background-color 0.15s ease;
+}
+
+.button-secondary-pill:hover {
+  background-color: rgba(0, 102, 204, 0.05);
+}
+
+.button-secondary-pill:active {
+  transform: scale(0.95);
+}
+
+/* Dark Utility Button */
+.button-dark-utility {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background-color: var(--color-ink);
+  color: #ffffff;
+  font-family: var(--font-family);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: -0.014em;
+  padding: 8px 15px;
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.1s cubic-bezier(0.2, 0, 0, 1), opacity 0.15s ease;
+}
+
+.button-dark-utility:hover {
+  opacity: 0.9;
+}
+
+.button-dark-utility:active {
+  transform: scale(0.95);
+}
+
+/* Pearl Capsule Button */
+.button-pearl-capsule {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background-color: var(--color-surface-pearl);
+  color: var(--color-ink-muted-80);
+  font-family: var(--font-family);
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: -0.014em;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-hairline);
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.1s cubic-bezier(0.2, 0, 0, 1), background-color 0.15s ease;
+}
+
+.button-pearl-capsule:hover {
+  background-color: #f0f0f2;
+}
+
+.button-pearl-capsule:active {
+  transform: scale(0.95);
+}
+
+/* Danger Pill Button */
+.button-danger-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: var(--color-danger);
+  color: #ffffff;
+  font-family: var(--font-family);
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  padding: 10px 22px;
+  border-radius: var(--radius-pill);
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.1s cubic-bezier(0.2, 0, 0, 1), opacity 0.15s ease;
+}
+
+.button-danger-pill:hover {
+  opacity: 0.92;
+}
+
+.button-danger-pill:active {
+  transform: scale(0.95);
+}
+
+.button-danger-pill:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Success Green Pill */
+.button-success-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: var(--color-safe);
+  color: #ffffff;
+  font-family: var(--font-family);
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  padding: 10px 22px;
+  border-radius: var(--radius-pill);
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.1s cubic-bezier(0.2, 0, 0, 1), opacity 0.15s ease;
+}
+
+.button-success-pill:hover {
+  opacity: 0.92;
+}
+
+.button-success-pill:active {
+  transform: scale(0.95);
+}
+
+/* ─── Apple Badges / Status Chips ──────────────────────────────── */
+.apple-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  line-height: 1.2;
+}
+
+.chip-verified {
+  background-color: var(--color-safe-tint);
+  color: #248a3d;
+  border: 1px solid rgba(52, 199, 89, 0.25);
+}
+
+.chip-trusted {
+  background-color: rgba(0, 102, 204, 0.08);
+  color: var(--color-primary);
+  border: 1px solid rgba(0, 102, 204, 0.2);
+}
+
+.chip-regular {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: var(--color-ink-muted-80);
+  border: 1px solid var(--color-hairline);
+}
+
+.chip-new {
+  background-color: var(--color-caution-tint);
+  color: #b25000;
+  border: 1px solid rgba(255, 149, 0, 0.25);
+}
+
+.chip-risk-low {
+  background-color: var(--color-safe-tint);
+  color: #248a3d;
+  border: 1px solid rgba(52, 199, 89, 0.25);
+}
+
+.chip-risk-medium {
+  background-color: var(--color-caution-tint);
+  color: #b25000;
+  border: 1px solid rgba(255, 149, 0, 0.25);
+}
+
+.chip-risk-high {
+  background-color: var(--color-danger-tint);
+  color: #d70015;
+  border: 1px solid rgba(255, 59, 48, 0.25);
+}
+
+/* ─── Form Inputs ──────────────────────────────────────────────── */
+.apple-input-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.apple-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--color-body-muted);
+}
+
+.apple-input {
+  width: 100%;
+  height: 48px;
+  padding: 0 16px;
+  background-color: var(--color-canvas);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-sm);
+  color: var(--color-ink);
+  font-family: var(--font-family);
+  font-size: 16px;
+  letter-spacing: -0.015em;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  outline: none;
+}
+
+.apple-input:focus {
+  border-color: var(--color-primary-focus);
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.15);
+}
+
+.apple-input-hero {
+  font-size: clamp(36px, 6vw, 48px);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  height: 72px;
+  text-align: center;
+  border-radius: var(--radius-md);
+}
+
+/* ─── Security Warning Banner (Apple Style Alert) ───────────────── */
+.security-alert-box {
+  background-color: #ffffff;
+  border: 1px solid rgba(255, 59, 48, 0.25);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.security-alert-box::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background-color: var(--color-danger);
+}
+
+.security-alert-caution {
+  border-color: rgba(255, 149, 0, 0.3);
+}
+
+.security-alert-caution::before {
+  background-color: var(--color-caution);
+}
+
+/* ─── Apple Style Circular Countdown ───────────────────────────── */
+.apple-countdown-ring {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 16px;
+}
+
+.apple-countdown-ring svg {
+  transform: rotate(-90deg);
+  width: 72px;
+  height: 72px;
+}
+
+.apple-countdown-bg {
+  fill: none;
+  stroke: rgba(0, 0, 0, 0.06);
+  stroke-width: 3.5;
+}
+
+.apple-countdown-progress {
+  fill: none;
+  stroke: var(--color-danger);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s linear;
+}
+
+.apple-countdown-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-danger);
+}
+
+/* ─── Apple Style OTP Input ────────────────────────────────────── */
+.apple-otp-group {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin: 16px 0;
+}
+
+.apple-otp-slot {
+  width: 44px;
+  height: 52px;
+  background-color: var(--color-canvas);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-sm);
+  text-align: center;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--color-ink);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.apple-otp-slot:focus {
+  border-color: var(--color-primary-focus);
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.15);
+}
+
+/* ─── Apple Key-Value Spec Rows ────────────────────────────────── */
+.apple-spec-table {
+  width: 100%;
+  border-top: 1px solid var(--color-hairline);
+  margin: 20px 0;
+}
+
+.apple-spec-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.apple-spec-key {
+  font-size: 14px;
+  color: var(--color-body-muted);
+}
+
+.apple-spec-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-ink);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ─── Reasons List ─────────────────────────────────────────────── */
+.reasons-container {
+  margin: 18px 0;
+}
+
+.reason-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--color-ink);
+}
+
+.reason-bullet {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-top: 7px;
+  flex-shrink: 0;
+}
+
+.reason-bullet-danger {
+  background-color: var(--color-danger);
+}
+
+.reason-bullet-caution {
+  background-color: var(--color-caution);
+}
+
+/* ─── Footer (Apple Dense IA Link Row) ─────────────────────────── */
+.apple-footer {
+  background-color: var(--color-canvas-parchment);
+  border-top: 1px solid var(--color-hairline);
+  padding: 32px 24px 48px;
+  margin-top: auto;
+}
+
+.apple-footer-inner {
+  max-width: 980px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.apple-footer-text {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--color-ink-muted-48);
+}
