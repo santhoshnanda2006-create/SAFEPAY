@@ -178,4 +178,3 @@ The database comes pre-loaded with:
 - **Framework:** Express
 - **Database:** SQLite via `better-sqlite3` (synchronous, zero config)
 - **No build step** — just `npm install` and `npm start`
-"# TRUEPAYEE" 

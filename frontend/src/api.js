@@ -10,7 +10,7 @@ import {
 } from "./mock";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
-const USE_MOCK = true; // ← flip to false when backend is ready
+const USE_MOCK = false; // Connected to live backend
 
 async function request(method, path, body) {
   const res = await fetch(`${BASE_URL}${path}`, {
