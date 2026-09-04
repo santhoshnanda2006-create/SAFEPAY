@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { CheckCircle2, XCircle, ShieldOff, ArrowUpRight, ArrowLeft } from "lucide-react";
 import { RiskBadge } from "../components/RiskBanner";
+import VoiceReadout from "../components/VoiceReadout";
 
 const STATUS_CONFIG = {
   SUCCESS: {
@@ -123,6 +124,17 @@ export default function Result() {
           </div>
         </div>
       </div>
+
+      {/* Voice Readout for Medium/High Risk Completed Transfers */}
+      {(riskLevel === "MEDIUM" || riskLevel === "HIGH") && status === "SUCCESS" && (
+        <VoiceReadout
+          riskLevel="SUCCESS"
+          amount={amount}
+          payeeName={payeeName}
+          autoPlay={true}
+          compact={false}
+        />
+      )}
 
       {/* ── Actions ── */}
       <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>

@@ -6,6 +6,7 @@ import RiskBanner, { RiskBadge } from "../components/RiskBanner";
 import VerifiedBadge from "../components/VerifiedBadge";
 import CountdownButton from "../components/CountdownButton";
 import OtpInput from "../components/OtpInput";
+import VoiceReadout from "../components/VoiceReadout";
 
 export default function RiskReview() {
   const { state } = useLocation();
@@ -174,6 +175,15 @@ export default function RiskReview() {
 
           <RiskBanner level="MEDIUM" reasons={reasons} />
 
+          {/* SafePay Voice Guard Audio Readout */}
+          <VoiceReadout
+            riskLevel="MEDIUM"
+            amount={amount}
+            payeeName={payeeName}
+            reasons={reasons}
+            autoPlay={true}
+          />
+
           <div className="store-utility-card" style={{ marginBottom: 24 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: "var(--color-ink-muted-48)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
@@ -251,6 +261,15 @@ export default function RiskReview() {
 
           {/* Prominent Red Alert Box */}
           <RiskBanner level="HIGH" reasons={reasons} />
+
+          {/* SafePay Voice Guard Audio Readout */}
+          <VoiceReadout
+            riskLevel="HIGH"
+            amount={amount}
+            payeeName={payeeName}
+            reasons={reasons}
+            autoPlay={true}
+          />
 
           {/* Stepped-Up Requirements Checklist */}
           <div

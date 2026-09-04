@@ -12,7 +12,8 @@ import {
   UserCheck,
   UserX,
   AlertTriangle,
-  Info
+  Info,
+  Volume2
 } from "lucide-react";
 import { getContacts, evaluateTransfer } from "../api";
 import TrustBadge from "../components/TrustBadge";
@@ -647,6 +648,65 @@ export default function SendMoney() {
               ))}
             </div>
           </div>
+
+          {/* SafePay Voice Guard Preview Alert */}
+          {(liveEstimate.level === "MEDIUM" || liveEstimate.level === "HIGH") && (
+            <div
+              style={{
+                marginTop: 14,
+                padding: "10px 14px",
+                backgroundColor: "rgba(255, 255, 255, 0.75)",
+                borderRadius: "var(--radius-sm)",
+                border: "1px solid var(--color-hairline)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+                gap: 8,
+                fontSize: 12,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Volume2 size={16} color={liveEstimate.color} />
+                <div>
+                  <span style={{ fontWeight: 700, color: "var(--color-ink)" }}>
+                    Voice Readout Armed:{" "}
+                  </span>
+                  <span style={{ color: "var(--color-body-muted)" }}>
+                    Audible voice security recap will announce on the review screen.
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="button-pearl-capsule"
+                onClick={() => {
+                  if (typeof window !== "undefined" && "speechSynthesis" in window) {
+                    window.speechSynthesis.cancel();
+                    const amtStr = (parseFloat(amount) || 0).toLocaleString("en-IN");
+                    const targetName = isCustomPayee ? (customName || "Custom Payee") : (selectedContact?.displayName || "Recipient");
+                    const text =
+                      liveEstimate.level === "HIGH"
+                        ? `Security Alert: High Risk Transaction Detected. You are transferring a high-value amount of ${amtStr} rupees to ${targetName}. Mandatory cooling-off delay and OTP required.`
+                        : `Notice: Medium Risk Transaction. You are authorizing a transfer of ${amtStr} rupees to ${targetName}. Please verify recipient details before confirming.`;
+                    const u = new SpeechSynthesisUtterance(text);
+                    u.lang = "en-IN";
+                    u.rate = 0.95;
+                    window.speechSynthesis.speak(u);
+                  }
+                }}
+                style={{
+                  fontSize: 11,
+                  padding: "4px 10px",
+                  color: liveEstimate.color,
+                  borderColor: liveEstimate.color,
+                  fontWeight: 600,
+                }}
+              >
+                🔊 Test Voice Alert
+              </button>
+            </div>
+          )}
         </div>
 
         {/* ── Collapsible Simulation Controls ── */}
