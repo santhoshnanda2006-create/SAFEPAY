@@ -78,134 +78,76 @@ function evaluateRisk({
   let score = 0;
   const reasons = [];
 
-  // Payee lookup and trust signals
+  const numericAmt = Number(amount) || 0;
+
+  // Payee lookup for metadata and display attributes (does not alter amount-based risk tier)
   const contactRow = payeeAccountId
     ? db.prepare('SELECT transferCount FROM contacts WHERE accountId = ?').get(payeeAccountId)
     : null;
-  const priorToPayee = (senderId && payeeAccountId)
-    ? db.prepare('SELECT COUNT(*) AS n FROM transactions WHERE senderId = ? AND payeeAccountId = ? AND status = ?').get(senderId, payeeAccountId, 'SUCCESS')
-    : { n: 0 };
+  const isNewPayee = isCustomPayee ? (customTrustLevel === 'NEW') : (!contactRow || contactRow.transferCount === 0);
+  const payeeVerified = isCustomPayee ? Boolean(customIsVerified) : verifyPayee(payeeAccountId, payeeDisplayName);
+  const trustLevel = isCustomPayee ? (customTrustLevel || 'NEW') : (contactRow?.transferCount >= 3 ? 'TRUSTED' : (contactRow?.transferCount === 0 ? 'NEW' : 'REGULAR'));
 
-  let isNewPayee, trustLevel, payeeVerified;
+  // ── 1. PRIMARY RISK LEVEL DETERMINED STRICTLY BY TRANSFER AMOUNT ──
+  let riskLevel, requiredSteps;
 
-  if (isCustomPayee) {
-    trustLevel = customTrustLevel || 'NEW';
-    isNewPayee = trustLevel === 'NEW';
-    payeeVerified = Boolean(customIsVerified);
+  if (numericAmt >= 50000) {
+    // HIGH RISK: Amount >= ₹50,000
+    riskLevel = 'HIGH';
+    requiredSteps = ['CONFIRM_RECAP', 'DELAY_30S', 'OTP'];
+    score = Math.min(100, 65 + Math.round((numericAmt - 50000) / 2500));
+    reasons.push(`High-value transfer: ₹${numericAmt.toLocaleString('en-IN')} exceeds the ₹50,000 security threshold`);
+    if (numericAmt >= 100000) {
+      reasons.push(`Critical amount threshold exceeded (≥ ₹1,00,000)`);
+    }
+  } else if (numericAmt >= 10000) {
+    // MEDIUM RISK: Amount ₹10,000 – ₹49,999
+    riskLevel = 'MEDIUM';
+    requiredSteps = ['CONFIRM_RECAP'];
+    score = 25 + Math.round(((numericAmt - 10000) / 40000) * 20);
+    reasons.push(`Elevated transfer amount: ₹${numericAmt.toLocaleString('en-IN')} requires recipient recap review (threshold ₹10,000)`);
   } else {
-    isNewPayee = (!contactRow || contactRow.transferCount === 0) && priorToPayee.n === 0;
-    const transferCount = contactRow?.transferCount || 0;
-    trustLevel = transferCount >= 3 ? 'TRUSTED' : transferCount === 0 ? 'NEW' : 'REGULAR';
-    payeeVerified = verifyPayee(payeeAccountId, payeeDisplayName);
+    // LOW RISK: Amount < ₹10,000
+    riskLevel = 'LOW';
+    requiredSteps = [];
+    score = Math.max(0, Math.round((numericAmt / 10000) * 15));
+    // Clean routine transfer — no warning reasons needed
   }
 
-  // 1. First-time Payee Signal (+30)
-  if (isNewPayee) {
-    score += 30;
-    reasons.push('First transfer to this payee (+30 Risk)');
-  }
-
-  // 2. Scaled Amount Scoring (Dynamic based on absolute thresholds and multiple of usual average)
-  const avgRow = db.prepare(
-    'SELECT AVG(amount) AS avg FROM transactions WHERE senderId = ? AND status = ?'
-  ).get(senderId, 'SUCCESS');
-  const senderAvg = avgRow?.avg || 2500;
-  const numericAmt = Number(amount) || 0;
-
-  if (numericAmt >= 100000) {
-    score += 50;
-    reasons.push(`Critical high-value transfer: ₹${numericAmt.toLocaleString('en-IN')} exceeds ₹1,00,000 threshold (+50 Risk)`);
-  } else if (numericAmt >= 50000) {
-    score += 35;
-    reasons.push(`High-value transfer: ₹${numericAmt.toLocaleString('en-IN')} exceeds ₹50,000 threshold (+35 Risk)`);
-  } else if (numericAmt >= 25000 || numericAmt >= senderAvg * 6) {
-    score += 30;
-    reasons.push(`Amount is ${Math.round(numericAmt / senderAvg)}x your usual transfer (avg ₹${Math.round(senderAvg).toLocaleString('en-IN')}) (+30 Risk)`);
-  } else if (numericAmt >= 7500 || numericAmt >= senderAvg * 3) {
-    score += 25;
-    reasons.push(`Amount is ${Math.round(numericAmt / senderAvg)}x your usual transfer (avg ₹${Math.round(senderAvg).toLocaleString('en-IN')}) (+25 Risk)`);
-  }
-
-  // High-value to unverified payee risk multiplier
-  if (numericAmt >= 50000 && !payeeVerified) {
-    score += 15;
-    reasons.push('High-value transfer to unverified recipient (+15 Risk)');
-  }
-
-  // 3. New device
-  const knownDevice = db.prepare(
-    'SELECT 1 FROM devices WHERE senderId = ? AND deviceId = ?'
-  ).get(senderId, deviceId);
-  const isDevKnown = knownDevice || (deviceId && (deviceId.includes('KNOWN') || deviceId.includes('DEVICE-001') || deviceId.includes('device-abc-123')));
-  if (!isDevKnown && deviceId) {
-    score += 20;
-    reasons.push('New device detected (+20 Risk)');
-  }
-
-  // 4. Unusual location
-  const usualCityRow = db.prepare(
-    `SELECT locationCity, COUNT(*) AS n FROM evaluations
-     WHERE senderId = ? AND executed = 1 AND locationCity IS NOT NULL
-     GROUP BY locationCity ORDER BY n DESC LIMIT 1`
-  ).get(senderId);
-
-  const baselineCity = usualCityRow?.locationCity || 'Chennai';
-  if (location?.city) {
-    const usualCity = baselineCity.toLowerCase().trim();
-    const currentCity = location.city.toLowerCase().trim();
-    if (usualCity !== currentCity) {
-      score += 20;
-      reasons.push(`Transfer from unusual location (${location.city}, usual: ${baselineCity}) (+20 Risk)`);
+  // ── 2. Contextual Anomaly Vectors (Environmental overrides if simulated) ──
+  if (deviceId && (deviceId.includes('NEW') || deviceId.includes('IPHONE'))) {
+    score = Math.min(100, score + 20);
+    reasons.push('Unrecognized device fingerprint detected (+20)');
+    if (riskLevel === 'MEDIUM') {
+      riskLevel = 'HIGH';
+      requiredSteps = ['CONFIRM_RECAP', 'DELAY_30S', 'OTP'];
+    } else if (riskLevel === 'LOW' && score >= 25) {
+      riskLevel = 'MEDIUM';
+      requiredSteps = ['CONFIRM_RECAP'];
     }
   }
 
-  // 5. Late-night transfer (00:00–05:00)
+  if (location?.city && location.city.toLowerCase() !== 'chennai') {
+    score = Math.min(100, score + 20);
+    reasons.push(`Transfer from unusual location: ${location.city} (+20)`);
+    if (riskLevel === 'MEDIUM') {
+      riskLevel = 'HIGH';
+      requiredSteps = ['CONFIRM_RECAP', 'DELAY_30S', 'OTP'];
+    } else if (riskLevel === 'LOW' && score >= 25) {
+      riskLevel = 'MEDIUM';
+      requiredSteps = ['CONFIRM_RECAP'];
+    }
+  }
+
   const ts = new Date(timestamp);
   const hour = ts.getHours();
   if (hour >= 0 && hour < 5) {
-    score += 10;
+    score = Math.min(100, score + 10);
     const timeStr = ts.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
-    reasons.push(`Unusual time of day: ${timeStr} (+10 Risk)`);
+    reasons.push(`Unusual late-night transaction time: ${timeStr} (+10)`);
   }
 
-  // 6. Velocity — 3+ transfers in the preceding 10 minutes
-  const tenMinAgo = new Date(ts.getTime() - 10 * 60 * 1000).toISOString();
-  const recentCount = db.prepare(
-    'SELECT COUNT(*) AS n FROM evaluations WHERE senderId = ? AND timestamp > ? AND timestamp <= ?'
-  ).get(senderId, tenMinAgo, timestamp).n;
-  if (recentCount >= 3) {
-    score += 25;
-    reasons.push(`High velocity: ${recentCount} transfers in the last 10 minutes (+25 Risk)`);
-  }
-
-  // 7. Payee verified (KYC match) → negative discount (-15)
-  if (payeeVerified) {
-    score -= 15;
-  }
-
-  // 8. Trust level → negative discount (-20)
-  if (trustLevel === 'TRUSTED') {
-    score -= 20;
-  }
-
-  // Clamp final score to [0, 100]
   score = Math.max(0, Math.min(100, score));
-
-  // Adaptive Friction Assignment:
-  // 0–24 = LOW (Instant 1-tap dispatch, 0 friction)
-  // 25–49 = MEDIUM (Recap card review friction)
-  // 50–100 = HIGH (30s Cooling-Off Reflection Delay + 2FA OTP friction)
-  let riskLevel, requiredSteps;
-  if (score <= 24) {
-    riskLevel = 'LOW';
-    requiredSteps = [];
-  } else if (score <= 49) {
-    riskLevel = 'MEDIUM';
-    requiredSteps = ['CONFIRM_RECAP'];
-  } else {
-    riskLevel = 'HIGH';
-    requiredSteps = ['CONFIRM_RECAP', 'DELAY_30S', 'OTP'];
-  }
 
   const payeeAccountAgeDays = contactRow ? 90 : (trustLevel === 'TRUSTED' ? 180 : (trustLevel === 'REGULAR' ? 45 : 0));
 

@@ -86,7 +86,7 @@ const evaluations = {};
 let evalCounter = 9000;
 let txnCounter = 9000;
 
-// ── Determine risk for demo purposes ──
+// ── Determine risk strictly by amount ──
 function evaluateRisk(body) {
   const contact = MOCK_CONTACTS.find(
     (c) => c.accountId === body.payeeAccountId
@@ -107,71 +107,62 @@ function evaluateRisk(body) {
 
   let score = 0;
   const reasons = [];
-
-  if (isNewPayee) {
-    score += 30;
-    reasons.push("First transfer to this payee (+30 Risk)");
-  }
-
   const amt = Number(body.amount) || 0;
-  if (amt >= 100000) {
-    score += 50;
-    reasons.push(`Critical high-value transfer: ₹${amt.toLocaleString("en-IN")} exceeds ₹1,00,000 threshold (+50 Risk)`);
-  } else if (amt >= 50000) {
-    score += 35;
-    reasons.push(`High-value transfer: ₹${amt.toLocaleString("en-IN")} exceeds ₹50,000 threshold (+35 Risk)`);
-  } else if (amt >= 25000) {
-    score += 30;
-    reasons.push(`Amount ₹${amt.toLocaleString("en-IN")} is significantly higher than your typical transfer (+30 Risk)`);
-  } else if (amt >= 7500) {
-    score += 25;
-    reasons.push(`Amount ₹${amt.toLocaleString("en-IN")} is 3x+ higher than your usual transfer (+25 Risk)`);
+
+  // ── Primary risk level determined strictly by transfer amount (not recipient) ──
+  let riskLevel, requiredSteps;
+  if (amt >= 50000) {
+    riskLevel = "HIGH";
+    requiredSteps = ["CONFIRM_RECAP", "DELAY_30S", "OTP"];
+    score = Math.min(100, 65 + Math.round((amt - 50000) / 2500));
+    reasons.push(`High-value transfer: ₹${amt.toLocaleString("en-IN")} exceeds ₹50,000 security threshold`);
+    if (amt >= 100000) {
+      reasons.push(`Critical amount threshold exceeded (≥ ₹1,00,000)`);
+    }
+  } else if (amt >= 10000) {
+    riskLevel = "MEDIUM";
+    requiredSteps = ["CONFIRM_RECAP"];
+    score = 25 + Math.round(((amt - 10000) / 40000) * 20);
+    reasons.push(`Elevated transfer amount: ₹${amt.toLocaleString("en-IN")} requires recipient recap review (threshold ₹10,000)`);
+  } else {
+    riskLevel = "LOW";
+    requiredSteps = [];
+    score = Math.max(0, Math.round((amt / 10000) * 15));
   }
 
-  // High-value to unverified payee risk multiplier
-  if (amt >= 50000 && !payeeVerified) {
-    score += 15;
-    reasons.push("High-value transfer to unverified recipient (+15 Risk)");
-  }
-
+  // Environmental vectors
   if (body.deviceId && body.deviceId.startsWith("NEW")) {
-    score += 20;
-    reasons.push("New device detected (+20 Risk)");
+    score = Math.min(100, score + 20);
+    reasons.push("Unrecognized device fingerprint detected (+20 Risk)");
+    if (riskLevel === "MEDIUM") {
+      riskLevel = "HIGH";
+      requiredSteps = ["CONFIRM_RECAP", "DELAY_30S", "OTP"];
+    } else if (riskLevel === "LOW" && score >= 25) {
+      riskLevel = "MEDIUM";
+      requiredSteps = ["CONFIRM_RECAP"];
+    }
   }
   if (
     body.location &&
     body.location.city &&
     body.location.city.toLowerCase() !== "chennai"
   ) {
-    score += 20;
+    score = Math.min(100, score + 20);
     reasons.push(`Unusual location: ${body.location.city} (+20 Risk)`);
+    if (riskLevel === "MEDIUM") {
+      riskLevel = "HIGH";
+      requiredSteps = ["CONFIRM_RECAP", "DELAY_30S", "OTP"];
+    } else if (riskLevel === "LOW" && score >= 25) {
+      riskLevel = "MEDIUM";
+      requiredSteps = ["CONFIRM_RECAP"];
+    }
   }
   const hour = new Date(body.timestamp).getHours();
   if (hour >= 0 && hour < 5) {
-    score += 10;
-    reasons.push(
-      `Unusual time of day (${hour}:${String(new Date(body.timestamp).getMinutes()).padStart(2, "0")} AM) (+10 Risk)`
-    );
-  }
-  if (payeeVerified) {
-    score -= 15;
-  }
-  if (trustLevel === "TRUSTED") {
-    score -= 20;
+    score = Math.min(100, score + 10);
+    reasons.push("Unusual late-night transaction time (+10 Risk)");
   }
   score = Math.max(0, Math.min(100, score));
-
-  let riskLevel, requiredSteps;
-  if (score <= 24) {
-    riskLevel = "LOW";
-    requiredSteps = [];
-  } else if (score <= 49) {
-    riskLevel = "MEDIUM";
-    requiredSteps = ["CONFIRM_RECAP"];
-  } else {
-    riskLevel = "HIGH";
-    requiredSteps = ["CONFIRM_RECAP", "DELAY_30S", "OTP"];
-  }
 
   return {
     riskScore: score,

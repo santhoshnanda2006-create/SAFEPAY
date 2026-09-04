@@ -64,100 +64,111 @@ export default function SendMoney() {
     });
   }, [accountId, searchParams]);
 
-  // Live real-time risk calculation preview
+  // Live real-time risk calculation preview (governed strictly by amount, not recipient)
   const liveEstimate = useMemo(() => {
     const amt = parseFloat(amount) || 0;
     let score = 0;
+    let level = "LOW";
+    let frictionTitle = "";
+    let frictionDesc = "";
+    let color = "var(--color-safe)";
+    let icon = Zap;
     const signals = [];
 
-    let isNew, isKyc, trust;
+    let isKyc, trust, payeeLabel;
     if (isCustomPayee) {
       trust = customTrustLevel;
-      isNew = trust === "NEW";
       isKyc = customIsVerified;
+      payeeLabel = customName || "Custom Payee";
     } else if (selectedContact) {
-      isNew = selectedContact.transferCount === 0;
       isKyc = selectedContact.isVerified;
       trust = selectedContact.trustLevel;
+      payeeLabel = selectedContact.displayName;
     } else {
-      isNew = true;
       isKyc = false;
       trust = "NEW";
+      payeeLabel = "Selected Payee";
     }
 
-    if (isNew) {
-      score += 30;
-      signals.push({ text: "First-time transfer to this recipient (+30)", type: "risk" });
+    // ── Primary risk level strictly determined by transfer amount ──
+    if (amt >= 50000) {
+      level = "HIGH";
+      color = "var(--color-danger)";
+      icon = ShieldAlert;
+      score = Math.min(100, 65 + Math.round((amt - 50000) / 2500));
+      frictionTitle = "30s Reflection Delay + 2FA OTP Required";
+      frictionDesc = "High-value transfer (≥ ₹50,000). Enforces mandatory 30-second cooling-off reflection delay and 6-digit OTP.";
+      signals.push({ text: `High-value transfer: ₹${amt.toLocaleString("en-IN")} exceeds ₹50,000 security threshold`, type: "risk" });
+      if (amt >= 100000) {
+        signals.push({ text: "Critical amount threshold exceeded (≥ ₹1,00,000)", type: "risk" });
+      }
+    } else if (amt >= 10000) {
+      level = "MEDIUM";
+      color = "var(--color-caution)";
+      icon = ShieldCheck;
+      score = 25 + Math.round(((amt - 10000) / 40000) * 20);
+      frictionTitle = "Mandatory Recipient Recap Review";
+      frictionDesc = "Moderate risk transfer (₹10,000 – ₹49,999). Requires reviewing recipient identity and account recap before dispatch.";
+      signals.push({ text: `Elevated transfer amount: ₹${amt.toLocaleString("en-IN")} requires recipient recap review (threshold ₹10,000)`, type: "risk" });
+    } else {
+      level = "LOW";
+      color = "var(--color-safe)";
+      icon = Zap;
+      score = Math.max(0, Math.round((amt / 10000) * 15));
+      frictionTitle = "Instant 1-Tap Execution (0 Friction)";
+      frictionDesc = "Routine transfer amount (< ₹10,000). Instant 1-tap dispatch without cooling-off delays or OTP.";
+      signals.push({ text: `Routine transfer amount: ₹${amt.toLocaleString("en-IN")} (< ₹10,000 threshold)`, type: "neutral" });
     }
 
-    if (amt >= 100000) {
-      score += 50;
-      signals.push({ text: `Critical high-value transfer: ₹${amt.toLocaleString("en-IN")} exceeds ₹1,00,000 threshold (+50)`, type: "risk" });
-    } else if (amt >= 50000) {
-      score += 35;
-      signals.push({ text: `High-value transfer: ₹${amt.toLocaleString("en-IN")} exceeds ₹50,000 threshold (+35)`, type: "risk" });
-    } else if (amt >= 25000) {
-      score += 30;
-      signals.push({ text: `Substantial transfer amount (10x average) (+30)`, type: "risk" });
-    } else if (amt >= 7500) {
-      score += 25;
-      signals.push({ text: `Elevated transfer amount (3x+ average) (+25)`, type: "risk" });
-    } else if (amt > 0) {
-      signals.push({ text: `Routine transfer amount within normal limits (+0)`, type: "neutral" });
-    }
-
-    if (amt >= 50000 && !isKyc) {
-      score += 15;
-      signals.push({ text: `High-value transfer to unverified recipient (+15)`, type: "risk" });
-    }
+    // Informational recipient profile tag for recap
+    signals.push({
+      text: `Payee Profile: ${payeeLabel} (${trust} · ${isKyc ? "KYC Verified" : "Unverified"})`,
+      type: "neutral",
+    });
 
     if (simDevice === "NEW-DEVICE") {
-      score += 20;
+      score = Math.min(100, score + 20);
       signals.push({ text: "Unrecognized device fingerprint detected (+20)", type: "risk" });
+      if (level === "MEDIUM") {
+        level = "HIGH";
+        color = "var(--color-danger)";
+        icon = ShieldAlert;
+        frictionTitle = "30s Reflection Delay + 2FA OTP Required";
+        frictionDesc = "Environmental anomaly escalated risk to HIGH. Enforces mandatory 30s cooling-off delay and 6-digit OTP.";
+      } else if (level === "LOW" && score >= 25) {
+        level = "MEDIUM";
+        color = "var(--color-caution)";
+        icon = ShieldCheck;
+        frictionTitle = "Mandatory Recipient Recap Review";
+        frictionDesc = "Environmental anomaly escalated risk to MEDIUM. Requires reviewing recipient recap.";
+      }
     }
     if (simCity.toLowerCase() !== "chennai") {
-      score += 20;
+      score = Math.min(100, score + 20);
       signals.push({ text: `Unusual location detected: ${simCity} (+20)`, type: "risk" });
+      if (level === "MEDIUM") {
+        level = "HIGH";
+        color = "var(--color-danger)";
+        icon = ShieldAlert;
+        frictionTitle = "30s Reflection Delay + 2FA OTP Required";
+        frictionDesc = "Environmental anomaly escalated risk to HIGH. Enforces mandatory 30s cooling-off delay and 6-digit OTP.";
+      } else if (level === "LOW" && score >= 25) {
+        level = "MEDIUM";
+        color = "var(--color-caution)";
+        icon = ShieldCheck;
+        frictionTitle = "Mandatory Recipient Recap Review";
+        frictionDesc = "Environmental anomaly escalated risk to MEDIUM. Requires reviewing recipient recap.";
+      }
     }
     if (simOddHour) {
-      score += 10;
+      score = Math.min(100, score + 10);
       signals.push({ text: "Unusual late-night transaction time (02:30 AM) (+10)", type: "risk" });
-    }
-
-    if (isKyc) {
-      score -= 15;
-      signals.push({ text: "KYC Verified Name match (-15)", type: "trust" });
-    }
-    if (trust === "TRUSTED") {
-      score -= 20;
-      signals.push({ text: "Established Trusted Payee discount (-20)", type: "trust" });
     }
 
     score = Math.max(0, Math.min(100, score));
 
-    let level, frictionTitle, frictionDesc, color, icon;
-    if (score <= 24) {
-      level = "LOW";
-      color = "var(--color-safe)";
-      icon = Zap;
-      frictionTitle = "Instant 1-Tap Execution (0 Friction)";
-      frictionDesc = "Low-risk patterns verified. One-tap instant dispatch without cooling-off delays or OTP.";
-    } else if (score <= 49) {
-      level = "MEDIUM";
-      color = "var(--color-caution)";
-      icon = ShieldCheck;
-      frictionTitle = "Mandatory Recipient Recap Review";
-      frictionDesc = "Moderate risk anomaly detected. Requires reviewing recipient details before confirmation.";
-    } else {
-      level = "HIGH";
-      color = "var(--color-danger)";
-      icon = ShieldAlert;
-      frictionTitle = "30s Reflection Delay + 2FA OTP Required";
-      frictionDesc = "High-risk transfer detected. Enforces mandatory 30-second cooling-off delay and 6-digit OTP.";
-    }
-
     return { score, level, color, icon, frictionTitle, frictionDesc, signals };
-  }, [amount, isCustomPayee, customTrustLevel, customIsVerified, selectedContact, simDevice, simCity, simOddHour]);
+  }, [amount, isCustomPayee, customName, customTrustLevel, customIsVerified, selectedContact, simDevice, simCity, simOddHour]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -256,8 +267,8 @@ export default function SendMoney() {
             <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-ink-muted-48)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
               1. Transfer Amount (INR)
             </span>
-            <span style={{ fontSize: 12, color: "var(--color-body-muted)" }}>
-              {currentNumericAmount >= 50000 ? "🔴 High Tier" : currentNumericAmount >= 7500 ? "🟡 Elevated Tier" : "🟢 Routine Tier"}
+            <span style={{ fontSize: 12, color: "var(--color-body-muted)", fontWeight: 600 }}>
+              {currentNumericAmount >= 50000 ? "🔴 High Risk Tier (≥ ₹50,000)" : currentNumericAmount >= 10000 ? "🟡 Medium Risk Tier (₹10,000 – ₹49,999)" : "🟢 Low Risk Tier (< ₹10,000)"}
             </span>
           </div>
 
@@ -459,7 +470,7 @@ export default function SendMoney() {
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600 }}>Relationship / Trust Level:</span>
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>Recipient Trust Status (for recap):</span>
                   <div style={{ display: "flex", gap: 6 }}>
                     {["NEW", "REGULAR", "TRUSTED"].map((level) => (
                       <button
@@ -469,13 +480,13 @@ export default function SendMoney() {
                         className={`button-pearl-capsule ${customTrustLevel === level ? "active" : ""}`}
                         style={{
                           fontSize: 11,
-                          padding: "4px 8px",
+                          padding: "4px 10px",
                           backgroundColor: customTrustLevel === level ? (level === "TRUSTED" ? "var(--color-safe)" : level === "NEW" ? "var(--color-danger)" : "var(--color-caution)") : undefined,
                           color: customTrustLevel === level ? "#fff" : undefined,
                           borderColor: customTrustLevel === level ? "transparent" : undefined,
                         }}
                       >
-                        {level === "NEW" ? "NEW (+30)" : level === "REGULAR" ? "REGULAR (+0)" : "TRUSTED (-20)"}
+                        {level === "NEW" ? "New Contact" : level === "REGULAR" ? "Regular Contact" : "Trusted Contact"}
                       </button>
                     ))}
                   </div>
@@ -495,7 +506,7 @@ export default function SendMoney() {
                         color: customIsVerified ? "#fff" : undefined,
                       }}
                     >
-                      ✓ Verified (-15)
+                      ✓ KYC Verified
                     </button>
                     <button
                       type="button"
@@ -507,9 +518,13 @@ export default function SendMoney() {
                         backgroundColor: !customIsVerified ? "rgba(0,0,0,0.06)" : undefined,
                       }}
                     >
-                      Unverified (+0)
+                      Unverified
                     </button>
                   </div>
+                </div>
+
+                <div style={{ fontSize: 11, color: "var(--color-body-muted)", lineHeight: 1.4, borderTop: "1px solid var(--color-hairline)", paddingTop: 8 }}>
+                  💡 <strong>Amount-Based Risk Rule:</strong> Recipient profile metadata is captured for your recap review. Risk tier (Low, Medium, High) and verification friction are detected strictly by the transfer amount.
                 </div>
               </div>
             </div>
