@@ -175,15 +175,6 @@ export default function RiskReview() {
 
           <RiskBanner level="MEDIUM" reasons={reasons} />
 
-          {/* SafePay Voice Guard Audio Readout */}
-          <VoiceReadout
-            riskLevel="MEDIUM"
-            amount={amount}
-            payeeName={payeeName}
-            reasons={reasons}
-            autoPlay={true}
-          />
-
           <div className="store-utility-card" style={{ marginBottom: 24 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: "var(--color-ink-muted-48)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
@@ -225,6 +216,15 @@ export default function RiskReview() {
             </div>
           </div>
 
+          {/* SafePay Voice Guard Audio Readout (Preceding Final Payment Authorization) */}
+          <VoiceReadout
+            riskLevel="MEDIUM"
+            amount={amount}
+            payeeName={payeeName}
+            reasons={reasons}
+            autoPlay={true}
+          />
+
           <button
             type="button"
             className="button-primary"
@@ -261,15 +261,6 @@ export default function RiskReview() {
 
           {/* Prominent Red Alert Box */}
           <RiskBanner level="HIGH" reasons={reasons} />
-
-          {/* SafePay Voice Guard Audio Readout */}
-          <VoiceReadout
-            riskLevel="HIGH"
-            amount={amount}
-            payeeName={payeeName}
-            reasons={reasons}
-            autoPlay={true}
-          />
 
           {/* Stepped-Up Requirements Checklist */}
           <div
@@ -362,6 +353,15 @@ export default function RiskReview() {
 
             <OtpInput value={otp} onChange={setOtp} />
           </div>
+
+          {/* SafePay Voice Guard Audio Readout (Preceding Final Payment Authorization) */}
+          <VoiceReadout
+            riskLevel="HIGH"
+            amount={amount}
+            payeeName={payeeName}
+            reasons={reasons}
+            autoPlay={true}
+          />
 
           {/* 30-Second Countdown & Confirmation Button */}
           <div className="store-utility-card" style={{ padding: "28px 24px" }}>
