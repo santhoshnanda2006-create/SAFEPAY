@@ -67,11 +67,12 @@ function evaluateRisk({ senderId, payeeAccountId, payeeDisplayName, amount, devi
   let score = 0;
   const reasons = [];
 
-  // 1. isNewPayee — never transferred to this accountId before
+  // 1. isNewPayee — never transferred to this accountId before OR contact is new
+  const contactRow = db.prepare('SELECT transferCount FROM contacts WHERE accountId = ?').get(payeeAccountId);
   const priorToPayee = db.prepare(
     'SELECT COUNT(*) AS n FROM transactions WHERE senderId = ? AND payeeAccountId = ? AND status = ?'
   ).get(senderId, payeeAccountId, 'SUCCESS');
-  const isNewPayee = priorToPayee.n === 0;
+  const isNewPayee = (!contactRow || contactRow.transferCount === 0) && priorToPayee.n === 0;
   if (isNewPayee) {
     score += 30;
     reasons.push('First transfer to this payee');
@@ -81,14 +82,14 @@ function evaluateRisk({ senderId, payeeAccountId, payeeDisplayName, amount, devi
   const avgRow = db.prepare(
     'SELECT AVG(amount) AS avg FROM transactions WHERE senderId = ? AND status = ?'
   ).get(senderId, 'SUCCESS');
-  const senderAvg = avgRow?.avg || 0;
-  const amountThreshold = senderAvg > 0 ? senderAvg * 3 : Infinity;
-  if (amount > 50000 || (senderAvg > 0 && amount > amountThreshold)) {
+  const senderAvg = avgRow?.avg || 2500;
+  const amountThreshold = senderAvg * 3;
+  if (amount > 50000 || amount > amountThreshold) {
     score += 25;
-    if (senderAvg > 0 && amount > amountThreshold) {
-      reasons.push(`Amount is ${Math.round(amount / senderAvg)}x your usual transfer`);
+    if (amount > 50000) {
+      reasons.push(`Amount ₹${amount.toLocaleString('en-IN')} exceeds ₹50,000 threshold`);
     } else {
-      reasons.push(`Amount exceeds ₹50,000`);
+      reasons.push(`Amount is ${Math.round(amount / senderAvg)}x your usual transfer (avg ₹${Math.round(senderAvg).toLocaleString('en-IN')})`);
     }
   }
 
@@ -155,7 +156,6 @@ function evaluateRisk({ senderId, payeeAccountId, payeeDisplayName, amount, devi
   }
 
   // 8. Trust level → negative signal
-  const contactRow = db.prepare('SELECT transferCount FROM contacts WHERE accountId = ?').get(payeeAccountId);
   const transferCount = contactRow?.transferCount || 0;
   const trustLevel = transferCount >= 3 ? 'TRUSTED' : transferCount === 0 ? 'NEW' : 'REGULAR';
   if (trustLevel === 'TRUSTED') {
@@ -166,12 +166,15 @@ function evaluateRisk({ senderId, payeeAccountId, payeeDisplayName, amount, devi
   // Clamp
   score = Math.max(0, Math.min(100, score));
 
-  // Risk level & required steps
+  // Risk level & required steps:
+  // 0–24 = LOW (Instant 1-tap dispatch)
+  // 25–49 = MEDIUM (Recap review required)
+  // 50–100 = HIGH (30s Reflection Delay + 2FA OTP)
   let riskLevel, requiredSteps;
-  if (score <= 29) {
+  if (score <= 24) {
     riskLevel = 'LOW';
     requiredSteps = [];
-  } else if (score <= 59) {
+  } else if (score <= 49) {
     riskLevel = 'MEDIUM';
     requiredSteps = ['CONFIRM_RECAP'];
   } else {

@@ -186,11 +186,11 @@ function seedIfEmpty() {
     VALUES (?, ?, ?, ?, ?, ?)
   `);
   const contacts = [
-    ['ACC001', 'priya.sharma@upi',   'Priya Sharma',    5, '2026-08-28T14:30:00Z', 'Mumbai'],
-    ['ACC002', 'rahul.verma@upi',    'Rahul Verma',     3, '2026-08-25T10:00:00Z', 'Mumbai'],
-    ['ACC003', 'anita.das@upi',      'Anita Das',       1, '2026-08-20T09:15:00Z', 'Delhi'],
-    ['ACC004', 'vikram.patel@upi',   'Vikram Patel',    0, null,                    null],
-    ['ACC005', 'meena.iyer@upi',     'Meena Iyer',      8, '2026-09-01T18:45:00Z', 'Bangalore'],
+    ['ACC-1001', 'priya.sharma@upi', 'Priya Sharma',  7, '2026-08-28T14:30:00Z', 'Chennai'],
+    ['ACC-1002', 'rahul.verma@upi',  'Rahul Verma',   3, '2026-09-01T10:15:00Z', 'Chennai'],
+    ['ACC-1003', 'anita.desai@upi',  'Anita Desai',   1, '2026-08-15T08:00:00Z', 'Chennai'],
+    ['ACC-1004', 'vikram.patel@upi', 'Vikram Patel',  0, null,                    'Chennai'],
+    ['ACC-1005', 'sneha.reddy@upi',  'Sneha Reddy',   0, null,                    null],
   ];
   const insertMany = db.transaction(() => {
     for (const c of contacts) insertContact.run(...c);
@@ -200,11 +200,10 @@ function seedIfEmpty() {
   // ── Verified KYC names ────────────────────────────────────
   const insertKyc = db.prepare('INSERT INTO verified_names (accountId, kycName) VALUES (?, ?)');
   const kyc = [
-    ['ACC001', 'Priya Sharma'],
-    ['ACC002', 'Rahul Kumar Verma'],
-    ['ACC003', 'Anita Das'],
-    ['ACC005', 'Meena Iyer'],
-    // ACC004 intentionally missing — unverified payee
+    ['ACC-1001', 'Priya Sharma'],
+    ['ACC-1002', 'Rahul Verma'],
+    ['ACC-1004', 'Vikram Patel'],
+    // ACC-1003 (Anita Desai) and ACC-1005 (Sneha Reddy) intentionally unverified
   ];
   const insertKycMany = db.transaction(() => {
     for (const k of kyc) insertKyc.run(...k);
@@ -212,7 +211,16 @@ function seedIfEmpty() {
   insertKycMany();
 
   // ── Known devices for the demo sender ─────────────────────
-  db.prepare('INSERT INTO devices (senderId, deviceId) VALUES (?, ?)').run('SENDER01', 'device-abc-123');
+  const devices = [
+    ['SENDER-001', 'DEVICE-001'],
+    ['SENDER-001', 'KNOWN-DEVICE'],
+    ['SENDER-001', 'device-abc-123'],
+    ['SENDER01', 'device-abc-123'],
+    ['SENDER01', 'DEVICE-001'],
+  ];
+  for (const [sender, dev] of devices) {
+    db.prepare('INSERT OR IGNORE INTO devices (senderId, deviceId) VALUES (?, ?)').run(sender, dev);
+  }
 
   // ── Prior transactions (so avg-amount & usual-city work) ──
   const insertTx = db.prepare(`
@@ -225,21 +233,25 @@ function seedIfEmpty() {
   `);
 
   const seedTxs = [
-    { txId: 'TX-SEED-001', evalId: 'EVAL-SEED-001', sender: 'SENDER01', payee: 'ACC001', name: 'Priya Sharma',  amount: 5000,  city: 'Mumbai', ts: '2026-08-25T10:30:00Z' },
-    { txId: 'TX-SEED-002', evalId: 'EVAL-SEED-002', sender: 'SENDER01', payee: 'ACC001', name: 'Priya Sharma',  amount: 8000,  city: 'Mumbai', ts: '2026-08-26T14:00:00Z' },
-    { txId: 'TX-SEED-003', evalId: 'EVAL-SEED-003', sender: 'SENDER01', payee: 'ACC002', name: 'Rahul Verma',   amount: 3000,  city: 'Mumbai', ts: '2026-08-27T09:00:00Z' },
-    { txId: 'TX-SEED-004', evalId: 'EVAL-SEED-004', sender: 'SENDER01', payee: 'ACC005', name: 'Meena Iyer',    amount: 12000, city: 'Mumbai', ts: '2026-09-01T18:45:00Z' },
+    { txId: 'TX-SEED-001', evalId: 'EVAL-SEED-001', sender: 'SENDER-001', payee: 'ACC-1001', name: 'Priya Sharma', amount: 2500, city: 'Chennai', ts: '2026-08-25T10:30:00Z' },
+    { txId: 'TX-SEED-002', evalId: 'EVAL-SEED-002', sender: 'SENDER-001', payee: 'ACC-1001', name: 'Priya Sharma', amount: 3000, city: 'Chennai', ts: '2026-08-26T14:00:00Z' },
+    { txId: 'TX-SEED-003', evalId: 'EVAL-SEED-003', sender: 'SENDER-001', payee: 'ACC-1002', name: 'Rahul Verma',  amount: 2000, city: 'Chennai', ts: '2026-08-27T09:00:00Z' },
+    { txId: 'TX-SEED-004', evalId: 'EVAL-SEED-004', sender: 'SENDER-001', payee: 'ACC-1003', name: 'Anita Desai',  amount: 2500, city: 'Chennai', ts: '2026-08-28T08:00:00Z' },
+    { txId: 'TX-SEED-101', evalId: 'EVAL-SEED-101', sender: 'SENDER01',   payee: 'ACC-1001', name: 'Priya Sharma', amount: 2500, city: 'Chennai', ts: '2026-08-25T10:30:00Z' },
+    { txId: 'TX-SEED-102', evalId: 'EVAL-SEED-102', sender: 'SENDER01',   payee: 'ACC-1001', name: 'Priya Sharma', amount: 3000, city: 'Chennai', ts: '2026-08-26T14:00:00Z' },
+    { txId: 'TX-SEED-103', evalId: 'EVAL-SEED-103', sender: 'SENDER01',   payee: 'ACC-1002', name: 'Rahul Verma',  amount: 2000, city: 'Chennai', ts: '2026-08-27T09:00:00Z' },
+    { txId: 'TX-SEED-104', evalId: 'EVAL-SEED-104', sender: 'SENDER01',   payee: 'ACC-1003', name: 'Anita Desai',  amount: 2500, city: 'Chennai', ts: '2026-08-28T08:00:00Z' },
   ];
 
   const seedTxMany = db.transaction(() => {
     for (const t of seedTxs) {
-      insertEval.run(t.evalId, t.sender, t.payee, t.name, t.amount, 'device-abc-123', t.city, t.ts, 0, 'LOW', 0, 1, '[]', '[]');
+      insertEval.run(t.evalId, t.sender, t.payee, t.name, t.amount, 'DEVICE-001', t.city, t.ts, 0, 'LOW', 0, 1, '[]', '[]');
       insertTx.run(t.txId, t.evalId, t.sender, t.payee, t.name, t.amount, 'SUCCESS', 'LOW', t.ts);
     }
   });
   seedTxMany();
 
-  console.log('✅ Seed data inserted (5 contacts, 4 KYC records, 4 prior transactions)');
+  console.log('✅ Seed data inserted (5 contacts matching frontend, 3 KYC records, 8 prior transactions)');
 }
 
 module.exports = { initDb, getDb };

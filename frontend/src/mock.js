@@ -143,10 +143,10 @@ function evaluateRisk(body) {
   score = Math.max(0, Math.min(100, score));
 
   let riskLevel, requiredSteps;
-  if (score < 30) {
+  if (score <= 24) {
     riskLevel = "LOW";
     requiredSteps = [];
-  } else if (score < 60) {
+  } else if (score <= 49) {
     riskLevel = "MEDIUM";
     requiredSteps = ["CONFIRM_RECAP"];
   } else {

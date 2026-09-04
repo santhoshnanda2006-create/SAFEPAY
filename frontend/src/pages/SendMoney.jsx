@@ -31,7 +31,9 @@ export default function SendMoney() {
     getContacts().then((data) => {
       setContacts(data);
       if (accountId) {
-        const found = data.find((c) => c.accountId === accountId);
+        const found = data.find(
+          (c) => c.accountId === accountId || c.accountId.replace(/[^0-9]/g, "") === accountId.replace(/[^0-9]/g, "")
+        );
         if (found) setSelectedContact(found);
       }
       const presetAmt = searchParams.get("presetAmt");
