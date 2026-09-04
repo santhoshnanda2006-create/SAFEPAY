@@ -91,32 +91,52 @@ function evaluateRisk(body) {
   const contact = MOCK_CONTACTS.find(
     (c) => c.accountId === body.payeeAccountId
   );
-  const isNewPayee = !contact || contact.transferCount === 0;
-  const payeeVerified = contact ? contact.isVerified : false;
-  const payeeAccountAgeDays = contact ? 120 + Math.floor(Math.random() * 200) : null;
+
+  let isNewPayee, payeeVerified, trustLevel;
+  if (body.isCustomPayee) {
+    trustLevel = body.customTrustLevel || "NEW";
+    isNewPayee = trustLevel === "NEW";
+    payeeVerified = Boolean(body.customIsVerified);
+  } else {
+    isNewPayee = !contact || contact.transferCount === 0;
+    payeeVerified = contact ? contact.isVerified : false;
+    trustLevel = contact?.trustLevel || (isNewPayee ? "NEW" : "REGULAR");
+  }
+
+  const payeeAccountAgeDays = contact ? 120 : (trustLevel === "TRUSTED" ? 180 : (trustLevel === "REGULAR" ? 45 : 0));
 
   let score = 0;
   const reasons = [];
 
   if (isNewPayee) {
     score += 30;
-    reasons.push("First transfer to this payee");
+    reasons.push("First transfer to this payee (+30 Risk)");
   }
-  if (body.amount > 50000) {
+
+  const amt = Number(body.amount) || 0;
+  if (amt >= 100000) {
+    score += 50;
+    reasons.push(`Critical high-value transfer: ₹${amt.toLocaleString("en-IN")} exceeds ₹1,00,000 threshold (+50 Risk)`);
+  } else if (amt >= 50000) {
+    score += 35;
+    reasons.push(`High-value transfer: ₹${amt.toLocaleString("en-IN")} exceeds ₹50,000 threshold (+35 Risk)`);
+  } else if (amt >= 25000) {
+    score += 30;
+    reasons.push(`Amount ₹${amt.toLocaleString("en-IN")} is significantly higher than your typical transfer (+30 Risk)`);
+  } else if (amt >= 7500) {
     score += 25;
-    reasons.push(
-      `Amount ₹${body.amount.toLocaleString("en-IN")} exceeds ₹50,000 threshold`
-    );
-  } else if (body.amount > 7500) {
-    // simulate 3x average
-    score += 25;
-    reasons.push(
-      `Amount is significantly higher than your usual transfer`
-    );
+    reasons.push(`Amount ₹${amt.toLocaleString("en-IN")} is 3x+ higher than your usual transfer (+25 Risk)`);
   }
+
+  // High-value to unverified payee risk multiplier
+  if (amt >= 50000 && !payeeVerified) {
+    score += 15;
+    reasons.push("High-value transfer to unverified recipient (+15 Risk)");
+  }
+
   if (body.deviceId && body.deviceId.startsWith("NEW")) {
     score += 20;
-    reasons.push("New device detected");
+    reasons.push("New device detected (+20 Risk)");
   }
   if (
     body.location &&
@@ -124,20 +144,19 @@ function evaluateRisk(body) {
     body.location.city.toLowerCase() !== "chennai"
   ) {
     score += 20;
-    reasons.push(`Unusual location: ${body.location.city}`);
+    reasons.push(`Unusual location: ${body.location.city} (+20 Risk)`);
   }
   const hour = new Date(body.timestamp).getHours();
   if (hour >= 0 && hour < 5) {
     score += 10;
     reasons.push(
-      `Unusual time of day (${hour}:${String(new Date(body.timestamp).getMinutes()).padStart(2, "0")} AM)`
+      `Unusual time of day (${hour}:${String(new Date(body.timestamp).getMinutes()).padStart(2, "0")} AM) (+10 Risk)`
     );
   }
   if (payeeVerified) {
     score -= 15;
-    // don't push a "reason" for a deduction
   }
-  if (contact && contact.trustLevel === "TRUSTED") {
+  if (trustLevel === "TRUSTED") {
     score -= 20;
   }
   score = Math.max(0, Math.min(100, score));

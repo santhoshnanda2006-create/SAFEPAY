@@ -10,7 +10,19 @@ const router = express.Router();
  * Evaluates a transfer for fraud risk. Persists the evaluation so /execute can look it up.
  */
 router.post('/evaluate', (req, res) => {
-  const { senderId, payeeAccountId, payeeUpiId, payeeDisplayName, amount, deviceId, location, timestamp } = req.body;
+  const {
+    senderId,
+    payeeAccountId,
+    payeeUpiId,
+    payeeDisplayName,
+    amount,
+    deviceId,
+    location,
+    timestamp,
+    isCustomPayee,
+    customTrustLevel,
+    customIsVerified,
+  } = req.body;
 
   // Basic validation
   if (!senderId || !payeeAccountId || !amount || !timestamp) {
@@ -27,6 +39,9 @@ router.post('/evaluate', (req, res) => {
     deviceId: deviceId || null,
     location: location || {},
     timestamp,
+    isCustomPayee,
+    customTrustLevel,
+    customIsVerified,
   });
 
   const evaluationId = `EVAL-${uuidv4().slice(0, 8).toUpperCase()}`;
